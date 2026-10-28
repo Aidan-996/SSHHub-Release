@@ -469,6 +469,91 @@
   footer a:hover { text-decoration: underline; }
   footer .sep { margin: 0 8px; color: rgba(100, 116, 139, .4); }
 
+  /* ---------- 主题切换按钮 ---------- */
+  .theme-toggle {
+    width: 34px; height: 34px; border-radius: 10px;
+    border: 1px solid var(--border-strong); background: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text); flex: none;
+    transition: border-color .2s, box-shadow .2s, color .2s, transform .15s;
+  }
+  .theme-toggle:hover { border-color: var(--cyan); color: var(--cyan-ink);
+    box-shadow: 0 2px 10px rgba(6, 182, 212, 0.2); transform: rotate(12deg); }
+  .theme-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor;
+    stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-toggle .icon-sun { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+  [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+  /* ---------- 深色主题 ---------- */
+  [data-theme="dark"] {
+    --bg: #070b17;
+    --bg-soft: #0b1222;
+    --panel: #0e1628;
+    --border: rgba(148, 180, 220, 0.18);
+    --border-strong: rgba(148, 180, 220, 0.32);
+    --cyan: #22d3ee;
+    --cyan-ink: #7ce4f8;
+    --text: #eef3fa;
+    --body: #c6d2e2;
+    --muted: #9aa9bf;
+    --shadow-soft: 0 1px 2px rgba(0,0,0,.4), 0 8px 26px rgba(0,0,0,.45);
+    --shadow-lift: 0 4px 12px rgba(0,0,0,.5), 0 20px 50px rgba(0,0,0,.55);
+  }
+  [data-theme="dark"] body { background: var(--bg); color: var(--text); }
+  [data-theme="dark"] .bg-fx {
+    background:
+      radial-gradient(ellipse 62% 38% at 50% -6%, rgba(45, 212, 239, 0.18), transparent 62%),
+      radial-gradient(ellipse 38% 30% at 88% 12%, rgba(167, 139, 250, 0.14), transparent 65%),
+      radial-gradient(ellipse 36% 28% at 4% 42%, rgba(52, 211, 153, 0.09), transparent 65%),
+      radial-gradient(ellipse 42% 28% at 80% 80%, rgba(244, 114, 182, 0.07), transparent 65%),
+      linear-gradient(rgba(148, 180, 220, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 180, 220, 0.05) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+  }
+  [data-theme="dark"] nav { background: rgba(7, 11, 23, 0.82); box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+  [data-theme="dark"] .theme-toggle { background: rgba(148, 180, 220, 0.08); }
+  [data-theme="dark"] .gh-btn { background: rgba(45, 212, 239, 0.08); color: var(--cyan-ink) !important; border-color: rgba(45, 212, 239, 0.4); }
+  [data-theme="dark"] .hero-badge { background: rgba(45, 212, 239, 0.1); box-shadow: 0 0 22px rgba(45,212,239,.16); }
+  [data-theme="dark"] .hero-glow {
+    background:
+      radial-gradient(ellipse at 35% 42%, rgba(45, 212, 239, 0.22), transparent 58%),
+      radial-gradient(ellipse at 66% 45%, rgba(167, 139, 250, 0.18), transparent 58%),
+      radial-gradient(ellipse at 50% 70%, rgba(244, 114, 182, 0.08), transparent 60%);
+  }
+  [data-theme="dark"] .btn-ghost { border-color: rgba(167, 139, 250, 0.55); color: #d6c9ff; background: rgba(167, 139, 250, 0.08); }
+  [data-theme="dark"] .btn-primary { background: linear-gradient(135deg, #0ea5c9, #22d3ee); color: #04121a; }
+  [data-theme="dark"] .stats-band { background: linear-gradient(180deg, #121c33, #0b1222); box-shadow: 0 16px 44px rgba(0,0,0,.35); }
+  [data-theme="dark"] .stat:nth-child(1) .num { color: #2dd4ef; }
+  [data-theme="dark"] .stat:nth-child(2) .num { color: #34d399; }
+  [data-theme="dark"] .stat:nth-child(3) .num { color: #a78bfa; }
+  [data-theme="dark"] .stat:nth-child(4) .num { color: #fbbf24; }
+  [data-theme="dark"] .term-mock { border-color: rgba(148,180,220,.24);
+    box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 100px rgba(45,212,239,.1); }
+  [data-theme="dark"] .sec-kicker { background: rgba(45, 212, 239, 0.09); }
+  [data-theme="dark"] .feat { background: linear-gradient(180deg, #0e1628, #0b1222); }
+  [data-theme="dark"] .feat:hover { box-shadow: 0 18px 46px rgba(0,0,0,.42), 0 0 34px color-mix(in srgb, var(--fa) 20%, transparent); }
+  [data-theme="dark"] .feat-ico { background: color-mix(in srgb, var(--fa) 13%, transparent); }
+  [data-theme="dark"] kbd { background: rgba(148, 180, 220, 0.13); color: #bfe9f5; }
+  [data-theme="dark"] .shot-card { background: #0e1628; }
+  [data-theme="dark"] .shot-cap { background: rgba(148, 180, 220, 0.04); }
+  [data-theme="dark"] .key-row:hover { background: rgba(45, 212, 239, 0.06); }
+  [data-theme="dark"] .plan-card { background: linear-gradient(180deg, #121c33, #0b1222); }
+  [data-theme="dark"] .plan-pro {
+    background:
+      linear-gradient(180deg, #121c33, #0b1222) padding-box,
+      linear-gradient(140deg, #ec4899, #8b5cf6 55%, #22d3ee) border-box;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 55px rgba(139, 92, 246, 0.18);
+  }
+  [data-theme="dark"] .plan-tag.free { color: #6ee7b7; }
+  [data-theme="dark"] .plan-tag.soon { color: #f9a8d4; }
+  [data-theme="dark"] .plan-list b { color: #f0f5fc; }
+  [data-theme="dark"] .about-card { background: linear-gradient(180deg, #121c33, #0b1222); }
+  [data-theme="dark"] .principle { background: rgba(148, 180, 220, 0.06); }
+  [data-theme="dark"] .about-meta span { background: rgba(148, 180, 220, 0.06); }
+  [data-theme="dark"] .dl-card { background: linear-gradient(180deg, #121c33, #0b1222); }
+  [data-theme="dark"] footer { background: transparent; }
+
   /* ---------- 滚动浮现 ---------- */
   @media (prefers-reduced-motion: no-preference) {
     .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
@@ -489,6 +574,10 @@
       <a href="#shortcuts">快捷键</a>
       <a href="#download">下载</a>
       <a href="#about">关于</a>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换明暗主题" title="切换明暗主题">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7"/></svg>
+      </button>
       <a class="gh-btn" href="https://github.com/Aidan-996/SSHHub-Release" target="_blank" rel="noopener">
         <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
@@ -798,6 +887,16 @@
 </footer>
 
 <script>
+  // 明暗主题切换(记忆在 localStorage)
+  const root = document.documentElement;
+  if (localStorage.getItem("sshhub-theme") === "dark") root.dataset.theme = "dark";
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const toDark = root.dataset.theme !== "dark";
+    if (toDark) root.dataset.theme = "dark";
+    else root.removeAttribute("data-theme");
+    localStorage.setItem("sshhub-theme", toDark ? "dark" : "light");
+  });
+
   // 滚动浮现
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const io = new IntersectionObserver((entries) => {
