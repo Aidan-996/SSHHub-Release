@@ -427,6 +427,38 @@
   .dl-note { text-align: center; margin-top: 28px; color: var(--muted); font-size: 13.5px; }
   .dl-note kbd { margin: 0 2px; }
 
+  /* ---------- 关于 ---------- */
+  .about-card {
+    max-width: 900px; margin: 0 auto;
+    background: #fff; border: 1px solid var(--border); border-radius: 20px;
+    padding: 40px 38px; box-shadow: var(--shadow-soft);
+    display: grid; gap: 30px; grid-template-columns: 1.25fr 1fr;
+  }
+  @media (max-width: 780px) { .about-card { grid-template-columns: 1fr; padding: 30px 24px; } }
+  .about-story h3 { font-size: 17px; font-weight: 750; margin-bottom: 12px; }
+  .about-story p { font-size: 14px; color: var(--body); }
+  .about-story p + p { margin-top: 12px; }
+  .about-side { display: grid; gap: 12px; align-content: start; }
+  .principle {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--body);
+  }
+  .principle .pi {
+    flex: none; width: 20px; height: 20px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .principle .pi svg { width: 11px; height: 11px; stroke: #fff; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .principle b { color: var(--text); }
+  .principle:nth-of-type(1) .pi { background: #0891b2; }
+  .principle:nth-of-type(2) .pi { background: #059669; }
+  .principle:nth-of-type(3) .pi { background: #7c3aed; }
+  .about-meta { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 26px; }
+  .about-meta span {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 4px 12px;
+  }
+
   /* ---------- 页脚 ---------- */
   footer { border-top: 1px solid var(--border); padding: 40px 0 48px; text-align: center;
     background: #fbfcfe; }
@@ -456,6 +488,7 @@
       <a href="#pro">Pro</a>
       <a href="#shortcuts">快捷键</a>
       <a href="#download">下载</a>
+      <a href="#about">关于</a>
       <a class="gh-btn" href="https://github.com/Aidan-996/SSHHub-Release" target="_blank" rel="noopener">
         <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
@@ -722,6 +755,32 @@
     系统要求:macOS 13 Ventura 及以上 · Apple Silicon。<br>
     应用内置自动更新:有新版本会自动提醒,<kbd>⌘</kbd><kbd>,</kbd> 设置里也可手动检查。
   </p>
+</section>
+
+<!-- ============ 关于 ============ -->
+<section id="about" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// ABOUT</div>
+    <h2>关于 SSHHub</h2>
+  </div>
+  <div class="about-card reveal">
+    <div class="about-story">
+      <h3>为什么做这个工具</h3>
+      <p>市面上的 SSH 客户端要么笨重昂贵,要么功能残缺。SSHHub 想做的很简单:一台 Mac、一个免费的原生工具,把「连服务器、管文件、开隧道」这三件事做到顺手。</p>
+      <p>它用 Swift + AppKit 从零写成。SSH 直接交给系统 <code style="font-family:var(--mono);font-size:12.5px;background:var(--bg-soft);border:1px solid var(--border);border-radius:5px;padding:1px 5px;">/usr/bin/ssh</code> —— 密钥、跳板机、known-hosts 与命令行完全一致,不重复造轮子;SFTP 则是自己实现的 v3 协议,零第三方依赖。</p>
+    </div>
+    <div class="about-side">
+      <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>数据不出门</b> — 主机、密码、密钥全部留在本机,无遥测、无账号、不上传任何数据</span></div>
+      <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>原生优先</b> — AppKit 原生界面,跟随系统字体渲染与快捷键习惯,不是套壳网页</span></div>
+      <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>免费无广告</b> — 核心功能永久免费,没有试用倒计时,没有广告弹窗</span></div>
+    </div>
+  </div>
+  <div class="about-meta reveal">
+    <span>作者 @Aidan-996</span>
+    <span>Swift · AppKit · SwiftTerm</span>
+    <span>当前版本 v1.4.0</span>
+    <span>macOS 13+ · Apple Silicon</span>
+  </div>
 </section>
 
 <footer>
