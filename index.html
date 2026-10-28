@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSHHub — Mac 原生 SSH 终端管理工具</title>
+<meta name="description" content="SSHHub:为 macOS 打造的科技感 SSH 终端管理器。多标签终端、分屏工作区、内置 SFTP、端口转发、命令面板,原生 Swift/AppKit 构建,免费使用。">
+<style>
+  :root {
+    --bg: #070b17;
+    --bg-soft: #0b1222;
+    --panel: #0e1628;
+    --panel-2: #121c33;
+    --border: rgba(148, 180, 220, 0.18);
+    --cyan: #2dd4ef;
+    --cyan-soft: #7ce4f8;
+    --violet: #a78bfa;
+    --green: #34d399;
+    --orange: #fbbf24;
+    --pink: #f472b6;
+    --blue: #60a5fa;
+    --text: #eef3fa;
+    --body: #c6d2e2;
+    --muted: #9aa9bf;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+  ::selection { background: rgba(45, 212, 239, 0.35); }
+
+  /* ---------- 背景网格 + 多彩光晕 ---------- */
+  .bg-fx {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(ellipse 70% 42% at 50% -8%, rgba(45, 212, 239, 0.22), transparent 62%),
+      radial-gradient(ellipse 42% 34% at 88% 14%, rgba(167, 139, 250, 0.16), transparent 65%),
+      radial-gradient(ellipse 40% 32% at 6% 46%, rgba(52, 211, 153, 0.11), transparent 65%),
+      radial-gradient(ellipse 46% 30% at 78% 78%, rgba(244, 114, 182, 0.08), transparent 65%),
+      linear-gradient(rgba(148, 180, 220, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 180, 220, 0.05) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- 导航 ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(14px);
+    background: rgba(7, 11, 23, 0.8);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 30px rgba(0,0,0,.25);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 28px; height: 60px; }
+  .brand {
+    font-family: var(--mono); font-weight: 800; font-size: 16px;
+    color: var(--text); text-decoration: none; letter-spacing: 0.5px;
+  }
+  .brand .prompt { color: var(--cyan); }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; align-items: center; }
+  .nav-links a {
+    color: var(--body); text-decoration: none; font-size: 13.5px; font-weight: 500;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--cyan-soft); }
+  .gh-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid rgba(45, 212, 239, 0.4); border-radius: 9px;
+    padding: 6.5px 14px; font-family: var(--mono); font-size: 12.5px;
+    color: var(--cyan-soft) !important; background: rgba(45, 212, 239, 0.08);
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .gh-btn:hover { border-color: rgba(45, 212, 239, 0.75); background: rgba(45, 212, 239, 0.14);
+    box-shadow: 0 0 18px rgba(45, 212, 239, 0.25); }
+  .gh-btn svg { width: 15px; height: 15px; fill: currentColor; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 88px 0 40px; text-align: center; position: relative; }
+  .hero-glow {
+    position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+    width: 720px; height: 420px; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 35% 40%, rgba(45, 212, 239, 0.28), transparent 60%),
+      radial-gradient(ellipse at 65% 45%, rgba(167, 139, 250, 0.24), transparent 60%);
+    filter: blur(38px); z-index: -1;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--cyan-soft);
+    border: 1px solid rgba(45, 212, 239, 0.45); border-radius: 999px;
+    padding: 6px 16px; background: rgba(45, 212, 239, 0.1);
+    box-shadow: 0 0 22px rgba(45, 212, 239, 0.18), inset 0 0 14px rgba(45, 212, 239, 0.06);
+    margin-bottom: 28px;
+  }
+  .hero-badge .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 10px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 50% { opacity: .45; } }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(42px, 7.4vw, 70px);
+    font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
+  }
+  h1 .grad {
+    background: linear-gradient(95deg, #8be9fd 0%, #2dd4ef 30%, #34d399 62%, #a78bfa 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  h1 .cursor { display: inline-block; width: 0.55em; height: 1.02em; background: var(--cyan);
+    vertical-align: -0.1em; margin-left: 6px; border-radius: 2px;
+    box-shadow: 0 0 18px rgba(45,212,239,.7); animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .hero p.tagline {
+    margin: 22px auto 0; max-width: 640px;
+    font-size: 18px; color: var(--body);
+  }
+  .hero p.tagline strong { color: #fff; font-weight: 700; }
+  .hero-cta { margin-top: 36px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 13px 28px; border-radius: 12px;
+    font-size: 15px; font-weight: 700; text-decoration: none;
+    transition: transform .15s, box-shadow .2s, border-color .2s, background .2s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn-primary {
+    background: linear-gradient(135deg, #22c8e8, #34d399);
+    color: #03121a; box-shadow: 0 6px 30px rgba(45, 212, 239, 0.45), 0 3px 12px rgba(52, 211, 153, 0.3);
+  }
+  .btn-primary:hover { box-shadow: 0 8px 40px rgba(45, 212, 239, 0.6); transform: translateY(-2px); }
+  .btn-ghost { border: 1.5px solid rgba(167, 139, 250, 0.55); color: #d6c9ff; background: rgba(167, 139, 250, 0.08); }
+  .btn-ghost:hover { border-color: var(--violet); background: rgba(167, 139, 250, 0.16);
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.3); transform: translateY(-2px); }
+  .btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .hero-meta { margin-top: 20px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .hero-meta span { margin: 0 10px; color: rgba(154,169,191,.5); }
+
+  /* ---------- 数据统计条 ---------- */
+  .stats-band {
+    max-width: 880px; margin: 54px auto 0;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border); border-radius: 16px;
+    background: linear-gradient(180deg, rgba(18, 28, 51, 0.85), rgba(11, 18, 34, 0.85));
+    box-shadow: 0 16px 44px rgba(0,0,0,.35);
+    overflow: hidden;
+  }
+  .stat { padding: 22px 10px; text-align: center; position: relative; }
+  .stat + .stat::before { content: ""; position: absolute; left: 0; top: 22%; height: 56%; width: 1px;
+    background: linear-gradient(180deg, transparent, var(--border), transparent); }
+  .stat .num {
+    font-family: var(--mono); font-size: 30px; font-weight: 800; letter-spacing: -1px;
+  }
+  .stat:nth-child(1) .num { color: var(--cyan); text-shadow: 0 0 22px rgba(45,212,239,.5); }
+  .stat:nth-child(2) .num { color: var(--green); text-shadow: 0 0 22px rgba(52,211,153,.5); }
+  .stat:nth-child(3) .num { color: var(--violet); text-shadow: 0 0 22px rgba(167,139,250,.5); }
+  .stat:nth-child(4) .num { color: var(--orange); text-shadow: 0 0 22px rgba(251,191,36,.5); }
+  .stat .lbl { margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  @media (max-width: 640px) {
+    .stats-band { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(3)::before { display: none; }
+  }
+
+  /* ---------- 终端模拟窗 ---------- */
+  .term-mock {
+    max-width: 800px; margin: 56px auto 0; position: relative;
+    background: rgba(10, 15, 28, 0.94);
+    border: 1px solid rgba(148, 180, 220, 0.24); border-radius: 15px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(45,212,239,.1),
+      0 0 100px rgba(45, 212, 239, 0.12), 0 0 140px rgba(167, 139, 250, 0.08);
+    text-align: left; overflow: hidden;
+  }
+  .term-mock::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--green), var(--violet), transparent);
+    opacity: .8;
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: rgba(148, 180, 220, 0.05);
+  }
+  .tl { width: 12px; height: 12px; border-radius: 50%; }
+  .tl.r { background: #ff5f57; box-shadow: 0 0 6px rgba(255,95,87,.5); }
+  .tl.y { background: #febc2e; box-shadow: 0 0 6px rgba(254,188,46,.5); }
+  .tl.g { background: #28c840; box-shadow: 0 0 6px rgba(40,200,64,.5); }
+  .term-title { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .term-body {
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.85;
+    padding: 20px 24px 24px; min-height: 258px; color: #d3dcea;
+  }
+  .term-body .p { color: #4ade80; font-weight: 600; }
+  .term-body .c { color: var(--cyan-soft); }
+  .term-body .dim { color: #77879e; }
+  .term-body .ok { color: #4ade80; }
+  .term-body .warn { color: #fcd34d; }
+  .type-line { white-space: pre-wrap; }
+  .type-caret { display: inline-block; width: 8px; height: 16px; background: var(--cyan);
+    vertical-align: -2px; box-shadow: 0 0 10px rgba(45,212,239,.8); animation: blink 1s steps(1) infinite; }
+
+  /* ---------- 区块通用 ---------- */
+  section { padding: 76px 0; }
+  .sec-head { text-align: center; margin-bottom: 48px; }
+  .sec-kicker {
+    display: inline-block;
+    font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--cyan);
+    letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 12px;
+    background: rgba(45, 212, 239, 0.09); border: 1px solid rgba(45, 212, 239, 0.3);
+    border-radius: 999px; padding: 4px 14px;
+  }
+  .sec-head h2 { font-size: clamp(27px, 4.2vw, 36px); font-weight: 800; letter-spacing: -0.5px; }
+  .sec-head p { color: var(--muted); margin-top: 12px; font-size: 15.5px; }
+
+  /* ---------- 特性网格(每卡一色) ---------- */
+  .feat-grid {
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  .feat {
+    --fa: var(--cyan);
+    background: linear-gradient(180deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 26px 24px; position: relative; overflow: hidden;
+    transition: transform .2s, border-color .25s, box-shadow .3s;
+  }
+  .feat:hover {
+    transform: translateY(-4px);
+    border-color: var(--fa);
+    box-shadow: 0 18px 46px rgba(0,0,0,.42), 0 0 34px color-mix(in srgb, var(--fa) 22%, transparent);
+  }
+  .feat::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 2.5px;
+    background: linear-gradient(90deg, transparent, var(--fa), transparent);
+    opacity: .55; transition: opacity .25s, box-shadow .25s;
+  }
+  .feat:hover::before { opacity: 1; box-shadow: 0 0 18px var(--fa); }
+  .feat::after {
+    content: ""; position: absolute; top: -70px; right: -70px; width: 190px; height: 190px;
+    border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--fa) 16%, transparent), transparent 70%);
+  }
+  .feat-ico {
+    width: 44px; height: 44px; border-radius: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--fa) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fa) 38%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--fa) 18%, transparent);
+  }
+  .feat-ico svg { width: 20px; height: 20px; stroke: var(--fa); fill: none; stroke-width: 1.9;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .feat h3 { font-size: 16px; font-weight: 700; margin-bottom: 7px; color: #f4f8fd; }
+  .feat h3 kbd { margin-left: 6px; }
+  .feat p { font-size: 13.5px; color: var(--body); }
+  /* 12 张卡各自的色调 */
+  .feat-grid .feat:nth-child(1)  { --fa: #2dd4ef; }
+  .feat-grid .feat:nth-child(2)  { --fa: #a78bfa; }
+  .feat-grid .feat:nth-child(3)  { --fa: #34d399; }
+  .feat-grid .feat:nth-child(4)  { --fa: #60a5fa; }
+  .feat-grid .feat:nth-child(5)  { --fa: #fbbf24; }
+  .feat-grid .feat:nth-child(6)  { --fa: #f472b6; }
+  .feat-grid .feat:nth-child(7)  { --fa: #2dd4bf; }
+  .feat-grid .feat:nth-child(8)  { --fa: #fb923c; }
+  .feat-grid .feat:nth-child(9)  { --fa: #38bdf8; }
+  .feat-grid .feat:nth-child(10) { --fa: #e879f9; }
+  .feat-grid .feat:nth-child(11) { --fa: #a3e635; }
+  .feat-grid .feat:nth-child(12) { --fa: #818cf8; }
+
+  kbd {
+    font-family: var(--mono); font-size: 11px;
+    background: rgba(148, 180, 220, 0.14); border: 1px solid var(--border);
+    border-bottom-width: 2px; border-radius: 5px; padding: 1.5px 6px; color: var(--cyan-soft);
+  }
+
+  /* ---------- 截图展示 ---------- */
+  .shots { display: grid; gap: 24px; }
+  .shot-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden; position: relative;
+    transition: border-color .25s, box-shadow .3s, transform .2s;
+  }
+  .shot-card:hover { border-color: rgba(45, 212, 239, 0.5); transform: translateY(-3px);
+    box-shadow: 0 22px 60px rgba(0,0,0,.5), 0 0 40px rgba(45,212,239,.1); }
+  .shot-card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 2.5px; z-index: 1;
+    background: linear-gradient(90deg, #2dd4ef, #34d399, #a78bfa, #f472b6);
+    opacity: .85;
+  }
+  .shot-card img { display: block; width: 100%; height: auto; }
+  .shot-cap {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 15px 22px; border-top: 1px solid var(--border);
+    background: rgba(148, 180, 220, 0.04);
+  }
+  .shot-cap .n { font-family: var(--mono); color: var(--cyan); font-size: 12.5px; font-weight: 700; }
+  .shot-cap .t { font-size: 15px; font-weight: 700; }
+  .shot-cap .d { color: var(--muted); font-size: 12.5px; margin-left: auto; text-align: right; }
+  .shot-pair { display: grid; gap: 24px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 860px) { .shot-pair { grid-template-columns: 1fr; } }
+
+  /* ---------- 快捷键 ---------- */
+  .keys-grid {
+    display: grid; gap: 10px 44px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .key-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 6px; border-bottom: 1px dashed rgba(148, 180, 220, 0.2);
+    border-radius: 6px; transition: background .15s;
+  }
+  .key-row:hover { background: rgba(45, 212, 239, 0.05); }
+  .key-row .a { color: var(--body); font-size: 14px; }
+  .key-row .k { display: flex; gap: 5px; }
+  .key-row kbd {
+    background: linear-gradient(180deg, rgba(148,180,220,.18), rgba(148,180,220,.08));
+    color: #bfe9f5; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+
+  /* ---------- Pro 版块 ---------- */
+  .pro-cards {
+    display: grid; gap: 22px; grid-template-columns: 1fr 1fr;
+    max-width: 900px; margin: 0 auto; align-items: stretch;
+  }
+  @media (max-width: 780px) { .pro-cards { grid-template-columns: 1fr; } }
+  .plan-card {
+    position: relative; overflow: hidden;
+    background: linear-gradient(180deg, var(--panel-2), var(--bg-soft));
+    border: 1px solid var(--border); border-radius: 20px; padding: 30px 28px;
+    display: flex; flex-direction: column;
+    transition: transform .2s, box-shadow .3s, border-color .25s;
+  }
+  .plan-card:hover { transform: translateY(-4px); }
+  .plan-free:hover {
+    border-color: rgba(45, 212, 239, 0.55);
+    box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 36px rgba(45,212,239,.14);
+  }
+  .plan-pro {
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(180deg, var(--panel-2), var(--bg-soft)) padding-box,
+      linear-gradient(140deg, #f472b6, #a78bfa 55%, #2dd4ef) border-box;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 55px rgba(167, 139, 250, 0.16);
+  }
+  .plan-pro:hover { box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 75px rgba(167, 139, 250, 0.28); }
+  .plan-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .plan-name { font-family: var(--mono); font-size: 21px; font-weight: 800; letter-spacing: 0.5px; }
+  .plan-free .plan-name { color: var(--cyan); }
+  .plan-pro .plan-name {
+    background: linear-gradient(95deg, #f9a8d4, #c4b5fd, #7ce4f8);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .plan-tag { font-family: var(--mono); font-size: 11.5px; border-radius: 999px; padding: 3.5px 11px; }
+  .plan-tag.free { color: var(--green); border: 1px solid rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.08); }
+  .plan-tag.soon {
+    color: #fce7f3; border: 1px solid rgba(244, 114, 182, 0.55);
+    background: linear-gradient(90deg, rgba(244, 114, 182, 0.16), rgba(167, 139, 250, 0.16));
+    animation: pulse 2.4s infinite;
+  }
+  .plan-sub { font-size: 13.5px; color: var(--muted); margin-bottom: 20px; }
+  .plan-list { list-style: none; display: grid; gap: 10px; margin: 0 0 24px; }
+  .plan-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--body); }
+  .plan-list b { color: #f0f5fc; font-weight: 650; }
+  .plan-list .ic {
+    flex: none; width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; margin-top: 2.5px;
+  }
+  .plan-free .ic { background: rgba(52, 211, 153, 0.14); }
+  .plan-free .ic svg { width: 10px; height: 10px; stroke: var(--green); fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .plan-pro .ic {
+    background: linear-gradient(135deg, rgba(244, 114, 182, 0.2), rgba(167, 139, 250, 0.2));
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.2);
+  }
+  .plan-pro .ic svg { width: 11px; height: 11px; fill: #e9d5ff; }
+  .plan-foot { margin-top: auto; }
+  .plan-foot .btn { width: 100%; justify-content: center; }
+  .pro-note { text-align: center; margin-top: 26px; color: var(--muted); font-size: 13px; }
+  .pro-note a { color: var(--cyan-soft); text-decoration: none; }
+  .pro-note a:hover { text-decoration: underline; }
+
+  /* ---------- CTA 横幅 ---------- */
+  .cta-banner {
+    position: relative; overflow: hidden; text-align: center;
+    border-radius: 22px; padding: 52px 30px; margin-bottom: 44px;
+    background:
+      radial-gradient(ellipse 60% 90% at 20% 0%, rgba(45, 212, 239, 0.3), transparent 60%),
+      radial-gradient(ellipse 60% 90% at 85% 100%, rgba(167, 139, 250, 0.3), transparent 60%),
+      linear-gradient(140deg, #101a34, #0c1326);
+    border: 1px solid rgba(45, 212, 239, 0.35);
+    box-shadow: 0 24px 70px rgba(0,0,0,.45), 0 0 60px rgba(45, 212, 239, 0.12);
+  }
+  .cta-banner h2 { font-size: clamp(24px, 3.6vw, 32px); font-weight: 800; letter-spacing: -0.5px; }
+  .cta-banner h2 .grad {
+    background: linear-gradient(95deg, #8be9fd, #34d399, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cta-banner p { color: var(--body); margin: 12px 0 26px; font-size: 15.5px; }
+  .cta-banner .btn-primary { font-size: 16px; padding: 14px 34px; }
+
+  /* ---------- 下载 ---------- */
+  .dl-cards { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; max-width: 780px; margin: 0 auto; }
+  @media (max-width: 680px) { .dl-cards { grid-template-columns: 1fr; } }
+  .dl-card {
+    --dc: var(--cyan);
+    background: linear-gradient(180deg, var(--panel-2), var(--bg-soft));
+    border: 1px solid var(--border); border-radius: 18px;
+    padding: 30px 26px; text-align: center; position: relative; overflow: hidden;
+    transition: transform .2s, border-color .25s, box-shadow .3s;
+    display: block; text-decoration: none; color: var(--text);
+  }
+  .dl-card:last-child { --dc: var(--violet); }
+  .dl-card:hover { transform: translateY(-4px); border-color: var(--dc);
+    box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 36px color-mix(in srgb, var(--dc) 25%, transparent); }
+  .dl-card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 2.5px;
+    background: linear-gradient(90deg, transparent, var(--dc), transparent);
+  }
+  .dl-card .fmt {
+    font-family: var(--mono); font-size: 30px; font-weight: 800; letter-spacing: -1px;
+    color: var(--dc); text-shadow: 0 0 26px color-mix(in srgb, var(--dc) 55%, transparent);
+  }
+  .dl-card .desc { color: var(--body); font-size: 13.5px; margin-top: 7px; }
+  .dl-card .go {
+    margin-top: 18px; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13.5px; font-weight: 700; color: var(--dc);
+  }
+  .dl-card .go:hover { text-decoration: underline; }
+  .dl-note { text-align: center; margin-top: 28px; color: var(--muted); font-size: 13.5px; }
+  .dl-note kbd { margin: 0 2px; }
+
+  /* ---------- 页脚 ---------- */
+  footer { border-top: 1px solid var(--border); padding: 40px 0 48px; text-align: center;
+    background: linear-gradient(180deg, transparent, rgba(45, 212, 239, 0.04)); }
+  footer .brand-line { font-family: var(--mono); font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  footer .brand-line .prompt { color: var(--cyan); }
+  footer p { color: var(--muted); font-size: 13px; }
+  footer a { color: var(--cyan-soft); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer .sep { margin: 0 8px; color: rgba(154,169,191,.4); }
+
+  /* ---------- 滚动浮现 ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-fx"></div>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="brand" href="#"><span class="prompt">❯_</span> SSHHub</a>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#screenshots">截图</a>
+      <a href="#pro">Pro</a>
+      <a href="#shortcuts">快捷键</a>
+      <a href="#download">下载</a>
+      <a class="gh-btn" href="https://github.com/Aidan-996/SSHHub-Release" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero wrap">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-badge"><span class="dot"></span> v1.4.0 · 免费使用 · 无广告</div>
+  <h1><span class="prompt" style="color:var(--cyan)">❯_</span> <span class="grad">SSHHub</span><span class="cursor"></span></h1>
+  <p class="tagline">
+    为 macOS 打造的<strong>原生 SSH 终端管理器</strong>。
+    主机管理、多标签、分屏工作区、内置 SFTP、端口转发 —— 一站式搞定,长得还好看。
+  </p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="https://github.com/Aidan-996/SSHHub-Release/releases/latest" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.6l-3.8-3.8-1.4 1.4L12 17.4l5.2-5.2-1.4-1.4-3.8 3.8V3h-2zM5 19h14v2H5v-2z"/></svg>
+      下载最新版
+    </a>
+    <a class="btn btn-ghost" href="https://github.com/Aidan-996/SSHHub-Release/issues" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.34c-.75.3-1.4.86-1.4 1.66v.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>
+      问题反馈
+    </a>
+  </div>
+  <div class="hero-meta">macOS 13+<span>/</span>Apple Silicon<span>/</span>Swift + AppKit 原生<span>/</span>系统 ssh 引擎</div>
+
+  <!-- 数据统计条 -->
+  <div class="stats-band reveal" aria-label="项目数据">
+    <div class="stat"><div class="num">20+</div><div class="lbl">功能特性</div></div>
+    <div class="stat"><div class="num">0</div><div class="lbl">SFTP 第三方依赖</div></div>
+    <div class="stat"><div class="num">4</div><div class="lbl">窗格分屏上限</div></div>
+    <div class="stat"><div class="num">6</div><div class="lbl">套终端主题</div></div>
+  </div>
+
+  <!-- 终端模拟 -->
+  <div class="term-mock" aria-hidden="true">
+    <div class="term-bar">
+      <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+      <span class="term-title">root@prod-web-01 — SSHHub</span>
+    </div>
+    <div class="term-body">
+      <div class="type-line"><span class="p">❯</span> <span class="c">sshhub</span> connect root@10.0.0.8 --port 22</div>
+      <div class="type-line"><span class="ok">✓ Connected</span> <span class="dim">· 密钥认证 · SFTP 就绪 · 分屏 2 窗格</span></div>
+      <div class="type-line">&nbsp;</div>
+      <div class="type-line"><span class="p">root@prod-web-01</span><span class="dim">:~</span># docker ps --format "table {{.Names}}\t{{.Status}}"</div>
+      <div class="type-line"><span class="dim">NAMES              STATUS</span></div>
+      <div class="type-line">nginx-proxy        <span class="ok">Up 12 days</span></div>
+      <div class="type-line">api-gateway        <span class="ok">Up 12 days</span></div>
+      <div class="type-line">redis-cache        <span class="ok">Up 30 days</span></div>
+      <div class="type-line">&nbsp;</div>
+      <div class="type-line"><span class="p">root@prod-web-01</span><span class="dim">:~</span># <span class="warn">⌘I 打开 SFTP · ⌘D 分屏 · ⌘P 端口转发</span><span class="type-caret"></span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ 功能 ============ -->
+<section id="features" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// FEATURES</div>
+    <h2>该有的都有,不该卡的一点不卡</h2>
+    <p>SSH 引擎直接调用系统 /usr/bin/ssh —— 密钥、Agent、跳板机、known-hosts 与命令行行为完全一致</p>
+  </div>
+  <div class="feat-grid">
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg></div>
+      <h3>多标签终端</h3>
+      <p>每个标签一条独立 ssh 进程,切换不断线、现场原样保留;彩色圆点标识主机,右键一键克隆会话。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></div>
+      <h3>左右分屏 <kbd>⌘D</kbd></h3>
+      <p>最多 4 窗格并排盯日志、比对环境;切换标签保持布局,任意关闭不乱序,双屏党狂喜。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></div>
+      <h3>内置 SFTP <kbd>⌘I</kbd></h3>
+      <p>自实现 SFTP v3 协议、零第三方依赖:浏览、上传/下载(递归)、改名、新建目录,Finder 文件直接拖进来。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></div>
+      <h3>分屏工作区</h3>
+      <p>把当前会话组合与窗格顺序存成工作区,一键恢复整套布局 —— 日常那几台机器,打开就位。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M4 12h13M13 6l6 6-6 6"/></svg></div>
+      <h3>端口转发 <kbd>⌘P</kbd></h3>
+      <p>-L / -R / -D(SOCKS)后台隧道,规则持久化、随应用自动恢复,失败原因直白可读。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+      <h3>命令面板 <kbd>⌘⇧P</kbd></h3>
+      <p>模糊搜索主机 / 命令片段 / 动作,键盘流的最爱;<kbd>⌘K</kbd> 输入 user@host 直接连。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></div>
+      <h3>断线自动重连</h3>
+      <p>会话退出显示退出码,异常断开自动退避重连(最多 3 次);支持 mosh,高延迟链路打字即时回显。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12L20 3M16 7l3 3M13 10l2 2"/></svg></div>
+      <h3>密钥托管 &amp; 钥匙串</h3>
+      <p>导入私钥(自动 chmod 600)或一键生成 ED25519 密钥对;SFTP 密码可存入 macOS 钥匙串加密保存。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+      <h3>应用内更新 &amp; 备份迁移</h3>
+      <p>启动自动检查 GitHub Releases 一键升级;主机 / 片段 / 工作区 / 转发规则打包导出,新机器秒恢复。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+      <h3>会话日志自动落盘</h3>
+      <p>开启后每个会话输出原样录制(含 ANSI 颜色),审计回溯有据可查,自动保留最近 60 份。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div>
+      <h3>常用命令片段</h3>
+      <p>高频命令收藏起来,一键插入当前终端,或插入并立即执行 —— 运维口头禅不用再敲第二遍。</p>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+      <h3>6 套主题 × 字体自由配</h3>
+      <p>深色科技风起步,6 套配色、字体字号随便调;菜单栏常驻图标,任何主机一点就连。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 截图 ============ -->
+<section id="screenshots" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// SCREENSHOTS</div>
+    <h2>眼见为实</h2>
+  </div>
+  <div class="shots">
+    <div class="shot-card reveal">
+      <img src="screenshots/main.png" alt="SSHHub 主窗口:多标签 + 左右分屏" loading="lazy">
+      <div class="shot-cap"><span class="n">01</span><span class="t">主窗口</span><span class="d">多标签 · 左右分屏 · 彩色主机标识</span></div>
+    </div>
+    <div class="shot-card reveal">
+      <img src="screenshots/sftp.png" alt="SSHHub SFTP 文件面板" loading="lazy">
+      <div class="shot-cap"><span class="n">02</span><span class="t">SFTP 文件面板</span><span class="d">浏览 · 上传下载 · 拖拽 · 隐藏文件开关</span></div>
+    </div>
+    <div class="shot-pair">
+      <div class="shot-card reveal">
+        <img src="screenshots/forward.png" alt="SSHHub 端口转发管理" loading="lazy">
+        <div class="shot-cap"><span class="n">03</span><span class="t">端口转发</span><span class="d">-L / -R / -D 隧道 · 状态一目了然</span></div>
+      </div>
+      <div class="shot-card reveal">
+        <img src="screenshots/editor.png" alt="SSHHub 主机编辑与密钥托管" loading="lazy">
+        <div class="shot-cap"><span class="n">04</span><span class="t">主机编辑 &amp; 密钥托管</span><span class="d">分组标签 · 跳板机 · mosh · ED25519</span></div>
+      </div>
+    </div>
+    <div class="shot-card reveal" style="max-width: 560px; margin: 0 auto; width: 100%;">
+      <img src="screenshots/snippets.png" alt="SSHHub 命令片段" loading="lazy">
+      <div class="shot-cap"><span class="n">05</span><span class="t">命令片段</span><span class="d">一键插入或直接执行</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Pro ============ -->
+<section id="pro" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// PRO</div>
+    <h2>Pro 版,为专业场景而生</h2>
+    <p>免费版已覆盖日常运维;下面是规划中的 Pro 高级方向 —— 免费版永久免费,持续更新</p>
+  </div>
+  <div class="pro-cards">
+    <!-- 免费版 -->
+    <div class="plan-card plan-free reveal">
+      <div class="plan-head">
+        <span class="plan-name">FREE</span>
+        <span class="plan-tag free">当前版本</span>
+      </div>
+      <div class="plan-sub">个人开发者与小团队够用的全部核心能力</div>
+      <ul class="plan-list">
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>多标签终端</b> · 4 窗格分屏</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>内置 SFTP</b>(自实现协议,零依赖)</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>端口转发</b> -L / -R / -D</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>分屏工作区</b> · 命令面板 · 片段</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>6 套主题</b> · 会话日志 · 自动重连</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></span><span><b>永久免费</b> · 持续更新</span></li>
+      </ul>
+      <div class="plan-foot">
+        <a class="btn btn-primary" href="https://github.com/Aidan-996/SSHHub-Release/releases/latest" target="_blank" rel="noopener">立即下载</a>
+      </div>
+    </div>
+    <!-- Pro -->
+    <div class="plan-card plan-pro reveal">
+      <div class="plan-head">
+        <span class="plan-name">PRO</span>
+        <span class="plan-tag soon">规划中 · 即将推出</span>
+      </div>
+      <div class="plan-sub">把 SSHHub 变成团队级运维利器的高级方向</div>
+      <ul class="plan-list">
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>批量命令执行</b> — 多机并行下发,输出聚合对比</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>会话录制回放</b> — 操作全程可复盘,asciinema 兼容</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>Zmodem 拖传</b> — rz/sz 文件直接拖进终端</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>配置云同步</b> — 主机/片段端到端加密,团队共享</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>AI 命令助手</b> — 报错解释、危险命令提醒、修复建议</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg></span><span><b>优先技术支持</b> — Issue 优先响应与功能投票权</span></li>
+      </ul>
+      <div class="plan-foot">
+        <a class="btn btn-ghost" href="https://github.com/Aidan-996/SSHHub-Release" target="_blank" rel="noopener">在 GitHub 关注进展</a>
+      </div>
+    </div>
+  </div>
+  <p class="pro-note reveal">
+    Pro 为规划中的功能方向,不代表已上线;上线节奏以 <a href="https://github.com/Aidan-996/SSHHub-Release/releases" target="_blank" rel="noopener">GitHub Releases</a> 公告为准。免费版承诺不变。
+  </p>
+</section>
+
+<!-- ============ 快捷键 ============ -->
+<section id="shortcuts" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// SHORTCUTS</div>
+    <h2>手不离键盘</h2>
+  </div>
+  <div class="keys-grid reveal">
+    <div class="key-row"><span class="a">快速连接</span><span class="k"><kbd>⌘</kbd><kbd>K</kbd></span></div>
+    <div class="key-row"><span class="a">命令面板</span><span class="k"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd></span></div>
+    <div class="key-row"><span class="a">添加分屏窗格(最多 4)</span><span class="k"><kbd>⌘</kbd><kbd>D</kbd></span></div>
+    <div class="key-row"><span class="a">SFTP 文件面板</span><span class="k"><kbd>⌘</kbd><kbd>I</kbd></span></div>
+    <div class="key-row"><span class="a">端口转发</span><span class="k"><kbd>⌘</kbd><kbd>P</kbd></span></div>
+    <div class="key-row"><span class="a">搜索终端内容</span><span class="k"><kbd>⌘</kbd><kbd>F</kbd></span></div>
+    <div class="key-row"><span class="a">克隆当前会话</span><span class="k"><kbd>⌘</kbd><kbd>T</kbd></span></div>
+    <div class="key-row"><span class="a">连接所选主机</span><span class="k"><kbd>⌘</kbd><kbd>↩</kbd></span></div>
+    <div class="key-row"><span class="a">重新连接</span><span class="k"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>R</kbd></span></div>
+    <div class="key-row"><span class="a">保存会话记录</span><span class="k"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>S</kbd></span></div>
+    <div class="key-row"><span class="a">导出备份</span><span class="k"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>S</kbd></span></div>
+    <div class="key-row"><span class="a">关闭当前标签</span><span class="k"><kbd>⌘</kbd><kbd>W</kbd></span></div>
+  </div>
+</section>
+
+<!-- ============ 下载 ============ -->
+<section id="download" class="wrap">
+  <div class="cta-banner reveal">
+    <h2>准备好把终端换成像样的工具了吗<span class="grad">?</span></h2>
+    <p>下载只要十几秒,连上你的第一台服务器只要一次点击。</p>
+    <a class="btn btn-primary" href="https://github.com/Aidan-996/SSHHub-Release/releases/latest" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.6l-3.8-3.8-1.4 1.4L12 17.4l5.2-5.2-1.4-1.4-3.8 3.8V3h-2zM5 19h14v2H5v-2z"/></svg>
+      免费下载 SSHHub
+    </a>
+  </div>
+  <div class="sec-head reveal">
+    <div class="sec-kicker">// DOWNLOAD</div>
+    <h2>两种安装方式</h2>
+    <p>免费 · 无广告 · 不上传任何数据</p>
+  </div>
+  <div class="dl-cards reveal">
+    <a class="dl-card" href="https://github.com/Aidan-996/SSHHub-Release/releases/latest" target="_blank" rel="noopener">
+      <div class="fmt">.DMG</div>
+      <div class="desc">推荐安装方式,拖进 Applications 即可</div>
+      <div class="go">获取最新版 <span>→</span></div>
+    </a>
+    <a class="dl-card" href="https://github.com/Aidan-996/SSHHub-Release/releases" target="_blank" rel="noopener">
+      <div class="fmt">.ZIP</div>
+      <div class="desc">免安装压缩包,解压即用 / 便携方式</div>
+      <div class="go">全部历史版本 <span>→</span></div>
+    </a>
+  </div>
+  <p class="dl-note reveal">
+    系统要求:macOS 13 Ventura 及以上 · Apple Silicon。<br>
+    应用内置自动更新:有新版本会自动提醒,<kbd>⌘</kbd><kbd>,</kbd> 设置里也可手动检查。
+  </p>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand-line"><span class="prompt">❯_</span> SSHHub</div>
+    <p>
+      <a href="https://github.com/Aidan-996/SSHHub-Release" target="_blank" rel="noopener">GitHub</a>
+      <span class="sep">·</span>
+      <a href="https://github.com/Aidan-996/SSHHub-Release/releases" target="_blank" rel="noopener">下载与更新日志</a>
+      <span class="sep">·</span>
+      <a href="https://github.com/Aidan-996/SSHHub-Release/issues" target="_blank" rel="noopener">问题反馈</a>
+    </p>
+    <p style="margin-top:8px;">Swift + AppKit + SwiftTerm 原生构建 · Made for macOS</p>
+  </div>
+</footer>
+
+<script>
+  // 滚动浮现
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      }
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+  }
+</script>
+</body>
+</html>
