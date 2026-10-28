@@ -4,7 +4,7 @@
 
 **Mac 原生 SSH 终端管理工具 · Native SSH terminal manager for macOS**
 
-[![Version](https://img.shields.io/badge/version-1.4.0-06b6d4)](https://github.com/Aidan-996/SSHHub-Release/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.1-06b6d4)](https://github.com/Aidan-996/SSHHub-Release/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-macOS%2013%2B%20·%20Apple%20Silicon-black)](https://github.com/Aidan-996/SSHHub-Release/releases/latest)
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange)](https://swift.org)
 
@@ -18,6 +18,7 @@
 
 - **主机管理** — 分组标签、搜索、一键导入 `~/.ssh/config`
 - **多标签终端** — 每标签独立 ssh 进程,切换不断线;⌘D 最多 4 窗格分屏
+- **多会话同步输入**(⌘⇧B)— 广播模式:任意窗格敲命令,所有窗格同步执行
 - **内置 SFTP**(⌘I)— 自实现 SFTP v3 协议零依赖:上传/下载/改名/建目录,Finder 拖拽上传
 - **分屏工作区** — 保存会话与窗格布局,一键整组恢复
 - **端口转发**(⌘P)— `-L / -R / -D` 隧道后台常驻,规则持久化、自动恢复
@@ -33,6 +34,7 @@
 | 能力 / Capability | FREE(当前版本) | PRO(规划中) |
 |---|:---:|:---:|
 | 多标签终端 · 4 窗格分屏 / Tabs & split panes | ✅ | ✅ |
+| 多会话同步输入(⌘⇧B)/ Broadcast input | ✅ | ✅ |
 | 内置 SFTP(自实现 v3,零依赖)/ Built-in SFTP | ✅ | ✅ |
 | 端口转发 -L / -R / -D / Port forwarding | ✅ | ✅ |
 | 分屏工作区 · 命令面板 · 片段 / Workspaces, palette, snippets | ✅ | ✅ |
